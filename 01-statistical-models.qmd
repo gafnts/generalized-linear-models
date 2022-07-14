@@ -4,7 +4,7 @@
 pacman::p_load(tidyverse, GLMsData, patchwork)
 ```
 
-#### Conventions for describing data
+#### EDA
 
 ```{r}
 data(lungcap)
@@ -13,8 +13,6 @@ lungcap <-
   lungcap |> 
   as_tibble() |> 
   mutate(Smoke = factor(Smoke, labels = c('Non-smoker', 'Smoker')))
-
-lungcap |> summary()
 ```
 
 ```{r}
@@ -24,4 +22,60 @@ p3 <- lungcap |> ggplot(aes(Gender, FEV)) + geom_boxplot()
 p4 <- lungcap |> ggplot(aes(Smoke, FEV)) + geom_boxplot()
 
 (p1 + p2) / (p3 + p4)
+```
+
+```{r}
+p5 <- 
+  lungcap |> 
+  ggplot(aes(Age, FEV)) +
+  geom_point() +
+  facet_wrap(~ Smoke)
+
+p6 <- 
+  lungcap |> 
+  ggplot(aes(Ht, FEV)) +
+  geom_point() +
+  facet_wrap(~ Smoke)
+
+p5 / p6
+```
+
+```{r}
+p7 <- 
+  lungcap |> 
+  ggplot(aes(Age, FEV, color = Smoke)) +
+  geom_jitter(alpha = 0.5) +
+  ggtitle('FEV vs Age')
+
+p8 <- 
+  lungcap |> 
+  ggplot(aes(Gender, FEV, color = Smoke)) +
+  geom_boxplot() +
+  ggtitle('FEV, by gender and smoking status')
+
+p9 <- 
+  lungcap |> 
+  group_by(Gender, Smoke) |> 
+  summarise(FEV = mean(FEV)) |> 
+  ggplot(aes(Smoke, FEV, color = Gender)) +
+  geom_point() +
+  geom_line(aes(group = Gender)) +
+  ggtitle('Mean FEV, by gender and smoking status')
+
+p10 <- 
+  lungcap |> 
+  group_by(Gender, Smoke) |> 
+  summarise(Age = mean(Age)) |> 
+  ggplot(aes(Smoke, Age, color = Gender)) +
+  geom_point() +
+  geom_line(aes(group = Gender)) +
+  ggtitle('Mean Age, by gender and smoking status')
+
+(p7 + p8) / (p9 + p10)
+```
+
+#### Statistical model
+
+```{r}
+
 ```
