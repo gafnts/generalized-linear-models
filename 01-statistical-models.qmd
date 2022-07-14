@@ -18,5 +18,10 @@ lungcap |> summary()
 ```
 
 ```{r}
-lungcap |> ggplot(aes(Age, FEV)) + geom_point()
+p1 <- lungcap |> ggplot(aes(Age, FEV)) + geom_point()
+p2 <- lungcap |> ggplot(aes(Ht, FEV)) + geom_point()
+p3 <- lungcap |> ggplot(aes(Gender, FEV)) + geom_boxplot()
+p4 <- lungcap |> ggplot(aes(Smoke, FEV)) + geom_boxplot()
+
+(p1 + p2) / (p3 + p4)
 ```
