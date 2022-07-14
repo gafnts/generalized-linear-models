@@ -1,5 +1,22 @@
 # Statistical models
 
 ```{r}
-pacman::p_load(tidyverse)
+pacman::p_load(tidyverse, GLMsData, patchwork)
+```
+
+#### Conventions for describing data
+
+```{r}
+data(lungcap)
+
+lungcap <- 
+  lungcap |> 
+  as_tibble() |> 
+  mutate(Smoke = factor(Smoke, labels = c('Non-smoker', 'Smoker')))
+
+lungcap |> summary()
+```
+
+```{r}
+lungcap |> ggplot(aes(Age, FEV)) + geom_point()
 ```
