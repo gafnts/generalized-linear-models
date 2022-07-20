@@ -77,5 +77,13 @@ p10 <-
 #### Statistical model
 
 ```{r}
+data(nminer)
+nminer <- nminer |> as_tibble()
+nminer
+```
 
+```{r}
+nminer |> 
+  ggplot(aes(Eucs, Minerab)) +
+  geom_point()
 ```

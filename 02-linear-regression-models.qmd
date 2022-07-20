@@ -1,0 +1,10 @@
+# Linear regression models
+
+```{r}
+pacman::p_load(tidyverse, here, janitor, GLMsData)
+```
+
+```{r}
+data("gestation")
+data <- gestation |> as_tibble() |> clean_names()
+```
