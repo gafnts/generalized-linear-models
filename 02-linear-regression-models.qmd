@@ -7,4 +7,74 @@ pacman::p_load(tidyverse, here, janitor, GLMsData)
 ```{r}
 data("gestation")
 data <- gestation |> as_tibble() |> clean_names()
+data |> glimpse()
+```
+
+```{r}
+data |> 
+  mutate(color = ifelse(births > 20, 'red', 'blue')) |> 
+  ggplot(aes(age, weight, color = color)) +
+  geom_point() +
+  theme(legend.position = 'none')
+```
+
+## Simple linear regression
+
+```{r}
+y <- data$weight
+x <- data$age
+w <- data$births
+
+xbar <- weighted.mean(x, w = w)
+ybar <- weighted.mean(y, w = w)
+
+SSxy <- sum(w * (x - xbar) * y)
+SSx <- sum(w * (x - xbar)^2)
+
+beta1 <- SSxy / SSx
+beta0 <- ybar - beta1 * xbar
+
+mu <- beta0 + beta1*x
+RSS <- sum(w * (y - mu)^2)
+
+c(beta0 = beta0, beta1 = beta1, RSS = RSS)
+```
+
+### Estimating the variance $$\sigma^2$$
+
+```{r}
+df <- length(x) - 2
+s2 <- RSS / df
+
+c(df = df, s = sqrt(s2), s2 = s2)
+```
+
+### Standard errors of the coefficients
+
+```{r}
+varb0 <- s2 * ( 1/sum(w) + xbar^2 / SSx )
+varb1 <- s2 / SSx
+
+sqrt(c(beta0 = varb0, beta1 = varb1))
+```
+
+```{r}
+lm(y ~ x, weights = w) |> summary()
+```
+
+### Standard errors of fitted values
+
+```{r}
+x.g <- 30
+mu.g <- beta0 + x.g * beta1
+var.mu.g <- s2 * (1/sum(w) + (x.g-xbar)^2 / SSx)
+se.mu.g <- sqrt(var.mu.g)
+
+c(mu = mu.g, se = sqrt(var.mu.g))
+```
+
+## Estimation for multiple regression
+
+```{r}
+
 ```
