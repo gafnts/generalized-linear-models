@@ -1,7 +1,7 @@
 # Linear regression models
 
 ```{r}
-pacman::p_load(tidyverse, here, janitor, GLMsData)
+pacman::p_load(tidyverse, magrittr, here, janitor, GLMsData)
 ```
 
 ```{r}
@@ -40,7 +40,7 @@ RSS <- sum(w * (y - mu)^2)
 c(beta0 = beta0, beta1 = beta1, RSS = RSS)
 ```
 
-### Estimating the variance $$\sigma^2$$
+### Estimating the variance $\sigma^2$
 
 ```{r}
 df <- length(x) - 2
@@ -76,5 +76,81 @@ c(mu = mu.g, se = sqrt(var.mu.g))
 ## Estimation for multiple regression
 
 ```{r}
+data('lungcap')
+data <- lungcap |> as_tibble() |> clean_names()
+data |> glimpse()
+```
 
+```{r}
+data |> 
+  mutate(log_fev = log(fev)) |> 
+  select(ht, fev, log_fev) |> 
+  pivot_longer(-ht) |> 
+  ggplot(aes(ht, value)) +
+  geom_point() +
+  geom_smooth() +
+  facet_wrap(vars(name), scales = 'free_y')
+```
+
+## Matrix formulation of linear regression models
+
+```{r}
+data %<>%
+  mutate(smoke = factor(smoke, 
+                        levels = c(0, 1), 
+                        labels = c('Non-smoker', 'Smoker')),
+         gender = factor(if_else(gender == 'F', 0, 1), 
+                         levels = c(0, 1), 
+                         labels = c('Female', 'Male')))
+
+X <- data |> model.matrix(formula(~ age + ht + gender + smoke), data = _)
+head(X)
+```
+
+```{r}
+XtX <- t(X) %*% X
+y <- log(data$fev)
+inv_XtX <- solve(XtX)
+XtY <- t(X) %*% y
+beta <- inv_XtX %*% XtY; drop(beta)
+```
+
+$$
+\bar{\mu} = -1.944 + 0.02339Age + 0.04280Height + 0.02932Gender + 0.04607Smoke
+$$
+
+```{r}
+beta <- solve(XtX, XtY); beta
+```
+
+```{r}
+QR <- qr(X)
+beta <- qr.coef(QR, y); beta
+```
+
+#### Estimating the variance $\sigma^2$
+
+```{r}
+mu <- X %*% beta
+RSS <- sum((y- mu)^2); RSS
+
+s2 <- RSS / (length(y) - length(beta))
+c(s = sqrt(s2), s2 = s2)
+```
+
+#### Estimating the variance of $\bar{\beta}$
+
+```{r}
+var_matrix <- s2 * inv_XtX
+var_beta_j <- diag(var_matrix)
+sqrt(var_beta_j)
+```
+
+#### Estimating the variance of fitted values
+
+```{r}
+xg_vec <- matrix(c(1, 18, 66, 0, 1), nrow = 1)
+mu_g <- xg_vec %*% beta
+var_mu_g <- sqrt(xg_vec %*% (solve(t(X) %*% X)) %*% t(xg_vec) * s2)
+c(mu_g, var_mu_g)
 ```
