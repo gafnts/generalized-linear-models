@@ -154,3 +154,67 @@ mu_g <- xg_vec %*% beta
 var_mu_g <- sqrt(xg_vec %*% (solve(t(X) %*% X)) %*% t(xg_vec) * s2)
 c(mu_g, var_mu_g)
 ```
+
+## Fitting linear regression models
+
+```{r}
+data("gestation")
+data <- gestation |> as_tibble() |> clean_names()
+
+weighted_fit <- data |> lm(weight ~ age, data = _, weights = births)
+weighted_fit |> summary()
+
+fit <- data |> lm(weight ~ age, data = _)
+fit |> summary()
+```
+
+```{r}
+data |> 
+  mutate(color = ifelse(births > 20, 'red', 'blue')) |> 
+  ggplot(aes(age, weight, color = color)) +
+  geom_point() +
+  theme(legend.position = 'none') +
+  geom_abline(intercept = coef(weighted_fit)[1], slope = coef(weighted_fit)[2]) +
+  geom_abline(intercept = coef(fit)[1], slope = coef(fit)[2], linetype = 'dashed')
+```
+
+#### The random component implies that the variation of the weigths aroun $\mu$ is approximately constant with $s^2 = 0.6010$
+
+```{r}
+# Compute variance:
+sum(weighted_fit$weights * weighted_fit$residuals^2) / weighted_fit$df.residual
+
+# Another option:
+deviance(weighted_fit) / weighted_fit$df.residual
+```
+
+```{r}
+# Confidence intervals for the parameters
+confint(weighted_fit)
+```
+
+```{r}
+# Confidence intervals for the estimates
+predict(weighted_fit, se.fit = TRUE) |> 
+  as_tibble() |> 
+  bind_cols(data) |> 
+  ggplot(aes(age, weight)) +
+  geom_point() +
+  geom_line(aes(age, fit)) +
+  geom_errorbar(aes(ymin = fit - se.fit, 
+                    ymax = fit + se.fit))
+```
+
+```{r}
+new <- tibble(age = 36)
+out <- predict(weighted_fit, newdata = new, se.fit = TRUE)
+
+tstar <- qt(weighted_fit$df, p = 0.975)
+ci_lo <- out$fit - tstar*out$se.fit
+ci_hi <- out$fit + tstar*out$se.fit
+ci_info <- cbind(lower = ci_lo, estimate = out$fit, upper = ci_hi)
+ci_info
+exp(ci_info)
+```
+
+## Analysis of variance for regression models
