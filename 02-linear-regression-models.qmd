@@ -248,14 +248,6 @@ c('Output R2' = summary(model)$r.squared,
   'Computed Adj R2' = adj_r_squared)
 ```
 
-```{r}
-summary(model)$fstatistic
-```
-
-```{r}
-anova(model)
-```
-
 ### Analysis of variance
 
 ```{r}
@@ -286,6 +278,75 @@ anova
 ```
 
 ## Comparing nested models
+
+#### The case of two nested models
+
+```{r}
+model_a <- data |> lm(log(fev) ~ age + smoke, data = _)
+model_b <- data |> lm(log(fev) ~ age + ht + gender + smoke, data = _)
+```
+
+$$
+H_o: \beta_2 = \beta_3 = 0 \\
+H_a: \beta_2 \not= \beta_3 \not= 0
+$$
+
+```{r}
+rss_a <- sum(resid(model_a)^2)
+rss_b <- sum(resid(model_b)^2)
+
+c(model_a = rss_a, model_b = rss_b)
+```
+
+```{r}
+ss <- rss_a - rss_b; ss
+df <- df.residual(model_a) - df.residual(model_b); df
+```
+
+```{r}
+df_b <- df.residual(model_b); df_b
+f <- (ss / df) / (rss_b / df_b); f
+pf(f, df1 = df, df2 = df_b, lower.tail = FALSE)
+```
+
+```{r}
+anova(model_a, model_b)
+```
+
+#### Sequential analysis of variance
+
+```{r}
+model_0 <- data |> lm(log(fev) ~ 1, data = _)
+model_1 <- update(model_0, . ~ . + age)
+model_2 <- update(model_1, . ~ . + ht)
+model_3 <- update(model_2, . ~ . + gender)
+model_4 <- update(model_3, . ~ . + smoke)
+```
+
+```{r}
+rss <- function(object) {sum(resid(object)^2)}
+
+rss_0 <- rss(model_0)
+rss_1 <- rss(model_1)
+rss_2 <- rss(model_2)
+rss_3 <- rss(model_3)
+rss_4 <- rss(model_4)
+```
+
+```{r}
+rss_list <-
+  c(model_4 = rss_4,
+    model_3 = rss_3,
+    model_2 = rss_2,
+    model_1 = rss_1,
+    model_0 = rss_0)
+```
+
+```{r}
+anova(model_4)
+```
+
+## Parallel and independent regressions
 
 ```{r}
 
