@@ -218,3 +218,75 @@ exp(ci_info)
 ```
 
 ## Analysis of variance for regression models
+
+```{r}
+data("lungcap")
+data <- lungcap |> as_tibble() |> clean_names()
+data |> glimpse()
+```
+
+```{r}
+model <- data |> lm(log(fev) ~ age + ht + gender + smoke, data = _)
+```
+
+```{r}
+y <- data |> mutate(fev = log(fev)) |> pull('fev')
+mu <- fitted(model)
+rss <- sum((y - mu)^2)
+sst <- sum((y - mean(y))^2)
+
+c(RSS = rss, SST = sst, SSReg = sst - rss)
+```
+
+```{r}
+r_squared <- 1 - (rss/sst)
+adj_r_squared <- 1 - ((rss/(nrow(data) - (length(data) - 1))) / (sst/(nrow(data) - 1)))
+
+c('Output R2' = summary(model)$r.squared,
+  'Computed R2' = r_squared,
+  'Adjusted R2' = summary(model)$adj.r.squared,
+  'Computed Adj R2' = adj_r_squared)
+```
+
+```{r}
+summary(model)$fstatistic
+```
+
+```{r}
+anova(model)
+```
+
+### Analysis of variance
+
+```{r}
+sst <- sum((y - mean(y))^2)
+ssReg <- sum((fitted(model) - mean(y))^2)
+rss <- sum((y - mu)^2)
+
+round(sst, 5) == round(ssReg + rss, 5)
+```
+
+```{r}
+df_sy <- (length(data) - 1)
+df_rand <- nrow(data) - (length(data) - 1)
+```
+
+```{r}
+anova <-
+  tibble(
+    `Source of variation` = c('Systematic component', 'Random component'),
+    `Sums of squares` = c(ssReg, rss),
+    `Degrees of freedom` = c(df_sy, df_rand)
+  ) |>
+  mutate(`Mean square` = `Sums of squares` / `Degrees of freedom`,
+         'F' = c((anova[1, 4] |> pull() / anova[2, 4] |> pull()), 0))
+
+# Not quite?
+anova
+```
+
+## Comparing nested models
+
+```{r}
+
+```
