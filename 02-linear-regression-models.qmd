@@ -346,7 +346,92 @@ rss_list <-
 anova(model_4)
 ```
 
-## Parallel and independent regressions
+#### Parallel and independent regressions
+
+```{r}
+data('lungcap')
+data <- lungcap |> as_tibble() |> clean_names()
+```
+
+```{r}
+data |> lm(log(fev) ~ ht + smoke + ht:smoke, data = _) |> summary()
+data |> lm(log(fev) ~ ht * smoke, data = _) |> summary()
+```
+
+```{r}
+data |> lm(log(fev) ~ ht * smoke, data = _) |> anova()
+```
+
+## Choosing between non-nested models: AIC and BIC
+
+```{r}
+model_a <- data |> lm(log(fev) ~ age + smoke, data = _)
+model_b <- data |> lm(log(fev) ~ ht + smoke, data = _)
+```
+
+```{r}
+extractAIC(model_a)
+extractAIC(model_b)
+```
+
+```{r}
+k <- log(nrow(data))
+
+extractAIC(model_a, k = k)
+extractAIC(model_b, k = k)
+```
+
+## Tools to assits in model selection
+
+```{r}
+drop1(lm(log(fev) ~ age + ht + gender + smoke, data = data), test = 'F')
+```
+
+```{r}
+model <- data |> lm(log(fev) ~ age + ht + gender + smoke, data = _)
+add1(lm(log(fev) ~ smoke, data = data), model, test = 'F')
+```
+
+```{r}
+model <- data |> lm(log(fev) ~ age + ht + gender + smoke, data = _)
+add1(lm(log(fev) ~ age + ht, data = data), model, test = 'F')
+```
+
+#### Selection
+
+```{r}
+min_model <- data |> lm(log(fev) ~ age + ht + gender + smoke, data = _)
+max_model <- data |> lm(log(fev) ~ (smoke + age + ht + gender)^2, data = _)
+```
+
+```{r}
+auto_forward <- step(min_model, 
+                     direction = 'forward', 
+                     scope = list(lower = min_model, 
+                                  upper = max_model))
+```
+
+```{r}
+auto_backward <- step(min_model, 
+                     direction = 'backward', 
+                     scope = list(lower = min_model, 
+                                  upper = max_model))
+```
+
+```{r}
+auto_both <- step(min_model, 
+                     direction = 'both', 
+                     scope = list(lower = min_model, 
+                                  upper = max_model))
+```
+
+```{r}
+signif(coef(auto_forward), 3)
+signif(coef(auto_backward), 3)
+signif(coef(auto_both), 3)
+```
+
+## Case study
 
 ```{r}
 
