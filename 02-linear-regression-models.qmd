@@ -434,5 +434,32 @@ signif(coef(auto_both), 3)
 ## Case study
 
 ```{r}
+data('dental')
+data <- dental |> as_tibble() |> clean_names()
+data |> glimpse()
+data |> summary()
+```
 
+```{r}
+data |> 
+  ggplot(aes(sugar, dmft, color = indus)) +
+  geom_point()
+```
+
+```{r}
+data |> 
+  ggplot(aes(indus, dmft)) +
+  geom_boxplot()
+```
+
+```{r}
+data |> lm(dmft ~ sugar * indus, data = _) |> anova()
+data |> lm(dmft ~ sugar * indus, data = _) |> summary()
+```
+
+```{r}
+data |> 
+  ggplot(aes(sugar, dmft, color = indus)) +
+  geom_point() + 
+  geom_smooth(aes(group = indus), method = 'lm', se = FALSE)
 ```
