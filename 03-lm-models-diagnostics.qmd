@@ -44,5 +44,126 @@ p1 + p2
 ## Leverages for linear regression models
 
 ```{r}
+hat_values <- hatvalues(model)
+
+# Two largest leverages
+sort(hat_values, decreasing = TRUE)[1:2]
+
+# Mean of leverages
+mean(hat_values); length(coef(model)) / length(lung$fev)
+sort(hat_values, decreasing = TRUE)[1:2] / mean(hat_values)
+```
+
+```{r}
+sort_h <- sort(hat_values, decreasing = TRUE, index.return = TRUE)
+large_h <- sort_h$ix[1:2]
+lung[large_h, ]
+```
+
+```{r}
+lung |> 
+  rowid_to_column() |> 
+  mutate(color = case_when(
+    rowid %in% large_h ~ 1,
+    TRUE ~ 0
+  )) |> 
+  filter(gender == 'M' & smoke == 'Smoker') |> 
+  ggplot(aes(ht, fev, color = color)) +
+  geom_point() +
+  theme(legend.position = 'none') +
+  ggtitle('Male smokers')
+```
+
+## Residual plots
+
+### Residuals against $x_j$
+
+```{r}
+scatter.smooth(rstandard(model) ~ lung$ht, col = 'gray')
+```
+
+```{r}
+bind_cols(lung, rstandard(model) |> as_tibble()) |> 
+  ggplot(aes(ht, value)) +
+  geom_point(alpha = .5) +
+  geom_smooth(method = 'loess', formula = 'y ~ x')
+```
+
+### Partial residual plots
+
+```{r}
+partial_resid <- resid(model, type = 'partial') |> as_tibble(); partial_resid
+```
+
+```{r}
+termplot(model, partial.resid = TRUE, terms = 'ht', las = 1)
+```
+
+```{r}
+bind_cols(lung, partial_resid |> select(partial_resid = ht)) |> 
+  ggplot(aes(ht, partial_resid)) +
+  geom_point(alpha = .5) +
+  geom_smooth(method = 'loess', formula = 'y ~ x')
+```
+
+```{r}
+coef(summary(model))
+
+ht_model <- 
+  bind_cols(lung, partial_resid |> select(partial_resid = ht)) |> 
+  lm(partial_resid ~ ht, data = _)
+
+coef(summary(ht_model))
+```
+
+### Plot residuals against $\hat{\mu}$: Constant variance
+
+```{r}
+scatter.smooth(rstandard(model) ~ fitted(model), col = 'grey')
+```
+
+```{r}
+bind_cols(rstandard(model), fitted(model)) |> 
+  rename(resid = 1, fitted = 2) |> 
+  ggplot(aes(fitted, resid)) +
+  geom_point(alpha = .5) +
+  geom_smooth(method = 'loess', formula = 'y ~ x')
+```
+
+### Q---Q plots and normality
+
+```{r}
+qqnorm(rstandard(model))
+qqline(rstandard(model))
+```
+
+```{r}
+resid <- rstandard(model) |> as_tibble()
+
+p1 <- 
+  resid |> 
+  ggplot(aes(sample = value)) +
+  stat_qq() +
+  stat_qq_line()
+
+p2 <- 
+  resid |> 
+  ggplot(aes(value)) +
+  geom_histogram(bins = 50)
+
+p1 + p2
+```
+
+## Outliers and influential observations
+
+### Studentized residuals
+
+```{r}
+summary(cbind(Standarized = rstandard(model), Studentized = rstudent(model)))
+```
+
+### Influential observations
+
+```{r}
 
 ```
