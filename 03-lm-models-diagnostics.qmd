@@ -165,5 +165,97 @@ summary(cbind(Standarized = rstandard(model), Studentized = rstudent(model)))
 ### Influential observations
 
 ```{r}
+model <- lung |> lm(fev ~ ht + gender + smoke, data = _)
+```
 
+```{r}
+# Cook' distance
+cooks_max <- which.max(cooks.distance(model))
+cooks_min <- which.min(cooks.distance(model))
+c(Min = cooks_min, Max = cooks_max)
+
+# DFFITS, CV and Cook's distance
+out <- cbind(
+  DFFITS = dffits(model),
+  Cooks = cooks.distance(model),
+  Cov_rat = covratio(model)
+)
+
+round(out[c(cooks_min, cooks_max), ], 5)
+```
+
+```{r}
+model |> broom::tidy()
+dfbetas(model)[cooks_min, ]
+dfbetas(model)[cooks_max, ]
+```
+
+```{r}
+influence <- influence.measures(model); names(influence)
+
+head(round(influence$infmat, 3))
+head(influence$is.inf)
+```
+
+```{r}
+colSums(influence$is.inf)
+
+# 7 observations have high leverage
+# 56 observations are identified by the coveriance ratio as influential
+# Cook's distance does not identify any observation as influential
+```
+
+```{r}
+table(rowSums(influence$is.inf[, -8]))
+
+# 54 observations are declared as influential on just one criterion
+```
+
+#### Influence diagnostics
+
+```{r}
+bind_cols(
+  cooks.distance(model) |> as_tibble_col('cooks'),
+  dffits(model) |> as_tibble_col('dffits'),
+  dfbetas(model) |> as_tibble() |> select(3)
+) |> 
+  rowid_to_column() |> 
+  pivot_longer(!rowid) |> 
+  ggplot(aes(rowid, value, color = name)) +
+  geom_line() +
+  facet_wrap(~ name, scales = 'free_y')
+```
+
+## Transforming the response
+
+```{r}
+model_sqrt <- lung |> lm(sqrt(fev) ~ ht + gender + smoke, data = _)
+
+bind_cols(
+  rstandard(model_sqrt) |> as_tibble_col('standardized'),
+  fitted(model_sqrt) |> as_tibble_col('fitted')
+) |> 
+  ggplot(aes(fitted, standardized)) +
+  geom_point()
+```
+
+```{r}
+model_log <- lung |> lm(log(fev) ~ ht + gender + smoke, data = _)
+
+bind_cols(
+  rstandard(model_log) |> as_tibble_col('log'),
+  fitted(model_log) |> as_tibble_col('fitted')
+) |> 
+  ggplot(aes(fitted, log)) +
+  geom_point()
+```
+
+#### The Box-Cox transformation
+
+```{r}
+library(MASS)
+
+boxcox(fev ~ ht + gender + smoke,
+       lambda = seq(-.25, .25, length = 11),
+       data = lung)
 ```
