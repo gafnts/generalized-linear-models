@@ -221,8 +221,8 @@ bind_cols(
 ) |> 
   rowid_to_column() |> 
   pivot_longer(!rowid) |> 
-  ggplot(aes(rowid, value, color = name)) +
-  geom_line() +
+  ggplot(aes(rowid, value, fill = name)) +
+  geom_col() +
   facet_wrap(~ name, scales = 'free_y')
 ```
 
@@ -258,4 +258,180 @@ library(MASS)
 boxcox(fev ~ ht + gender + smoke,
        lambda = seq(-.25, .25, length = 11),
        data = lung)
+```
+
+## Simple transformations of covariates
+
+```{r}
+data('windmill')
+windmill <- windmill |> as_tibble() |> clean_names()
+```
+
+```{r}
+transformations <- 
+  windmill |> 
+  mutate(wind_log = log(wind),
+         wind_inv = 1/wind)
+
+models <- 
+  transformations |> 
+  map(~ lm(dc ~ .x, data = windmill))
+```
+
+```{r}
+rstandard <- 
+  models |> 
+  map_dfc(rstandard) |> 
+  rename_with(~ str_c(., '_rstandard'), .cols = contains('wind'))
+
+fitted <- 
+  models |> 
+  map_dfc(fitted) |> 
+  rename_with(~ str_c(., '_fitted'), .cols = contains('wind'))
+
+results <- 
+  windmill |> 
+    bind_cols(
+      rstandard |> select(!dc),
+      fitted |> select(!dc),
+      transformations |> select(!c(dc, wind))
+    )
+```
+
+```{r}
+p1 <- 
+  results |> 
+  pivot_longer(!c(dc, contains('rstandard'), contains('fitted'))) |> 
+  ggplot(aes(value, dc, color = name)) +
+  geom_point() +
+  geom_smooth(method = 'loess', formula = 'y ~ x') +
+  facet_wrap(~ name, scales = 'free') +
+  theme(legend.position = 'none')
+```
+
+```{r}
+results |> 
+  select(!c(dc)) |> 
+  pivot_longer(contains('rstandard'), names_to = 'rstandard', values_to = 'r_vals') |> 
+  pivot_longer(contains('fitted'), names_to = 'fitted', values_to = 'f_vals') |> 
+  pivot_longer(!c(rstandard, r_vals, fitted, f_vals), 
+               names_to = 'transformations', values_to = 'vals') |> 
+  select(!vals) |> 
+  ggplot(aes(f_vals, r_vals, color = transformations)) +
+  geom_point() +
+  geom_smooth(method = 'loess', formula = 'y ~ x') +
+  facet_wrap(~ transformations, scales = 'free') +
+  theme(legend.position = 'none')
+```
+
+## Polynomial trends
+
+```{r}
+data("heatcap")
+heat <- heatcap |> as_tibble() |> clean_names()
+
+heat |> 
+  ggplot(aes(temp, cp)) +
+  geom_point() +
+  ylab('Heat capacity (cal/(mol.K)') +
+  xlab('Temp (Kelvin)')
+```
+
+#### Raw polynomial
+
+```{r}
+model <- heat |> lm(cp ~ temp + I(temp^2), data = _)
+summary(model, correlation = TRUE)$correlation
+summary(model)
+```
+
+```{r}
+heat |> 
+  bind_cols('pred' = predict(model)) |> 
+  pivot_longer(!temp) |> 
+  ggplot(aes(temp, value, color = name)) +
+  geom_point()
+```
+
+#### Orthogonal polynomials
+
+```{r}
+model_one <- heat |> lm(cp ~ poly(temp, 1), data = _)
+model_two <- heat |> lm(cp ~ poly(temp, 2), data = _)
+model_three <- heat |> lm(cp ~ poly(temp, 3), data = _)
+model_four <- heat |> lm(cp ~ poly(temp, 4), data = _)
+```
+
+```{r}
+summary(model_two, correlation = TRUE)$correlation
+zapsmall(summary(model_two, correlation = TRUE)$correlation)
+```
+
+```{r}
+heat |> 
+  bind_cols(
+    'linear' = predict(model_one),
+    'quadratic' = predict(model_two),
+    'cubic' = predict(model_three),
+    'quartic' = predict(model_four)
+  ) |> 
+  pivot_longer(
+    !c('cp', 'temp')
+  ) |> 
+  mutate(
+    across(name, factor, levels = c('linear', 'quadratic', 'cubic', 'quartic'))
+  ) |> 
+  ggplot(aes(temp, cp)) +
+  geom_point() +
+  geom_line(aes(y = value, color = name)) +
+  facet_wrap(~ name) +
+  theme(
+    legend.position = 'bottom'
+  )
+```
+
+```{r}
+model_four |> broom::tidy()
+```
+
+#### Diagnostics for the cubic model
+
+```{r}
+p1 <- 
+  bind_cols(rstandard(model_three), fitted(model_three)) |> 
+  rename(resid = 1, fitted = 2) |> 
+  ggplot(aes(fitted, resid)) +
+  geom_point(alpha = .5) +
+  ylab('Standardized residuals') +
+  xlab('Fitted values')
+
+p2 <- 
+  heat |> 
+  bind_cols('resid' = rstandard(model_three)) |> 
+  ggplot(aes(temp, resid)) +
+  geom_point(alpha = .5) +
+  ylab('Standardized residuals') +
+  xlab('Temp')
+
+p3 <- 
+  rstandard(model_three) |> 
+  as_tibble() |> 
+  ggplot(aes(sample = value)) +
+  stat_qq() +
+  stat_qq_line()
+
+p4 <- 
+  cooks.distance(model_three) |> 
+  as_tibble() |>
+  rowid_to_column() |> 
+  ggplot(aes(rowid, value)) +
+  geom_col()
+
+p1 + p2 / p3 + p4
+```
+
+## Regression splines
+
+```{r}
+
 ```
