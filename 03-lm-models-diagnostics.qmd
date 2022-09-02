@@ -329,7 +329,9 @@ results |>
 ```{r}
 data("heatcap")
 heat <- heatcap |> as_tibble() |> clean_names()
+```
 
+```{r}
 heat |> 
   ggplot(aes(temp, cp)) +
   geom_point() +
@@ -433,5 +435,52 @@ p1 + p2 / p3 + p4
 ## Regression splines
 
 ```{r}
+library(splines)
+bs(heat$temp, knots=quantile(heat$temp, c(.3, 0.6)), degree=2)
+```
 
+```{r}
+poly <- heat |> lm(cp ~ poly(temp, 3), data = _)
+ns <- heat |> lm(cp ~ ns(temp, df = 3), data = _)
+bs <- heat |> lm(cp ~ bs(temp, df = 3), data = _)
+```
+
+```{r}
+heat |> 
+  bind_cols(
+    'poly' = predict(poly),
+    'ns' = predict(ns),
+    'bs' = predict(bs)
+  ) |> 
+  pivot_longer(!c('cp', 'temp')) |> 
+  ggplot() +
+  geom_point(aes(temp, cp)) +
+  geom_line(aes(temp, value, color = name)) +
+  facet_wrap(~ name)
+```
+
+```{r}
+extractAIC(poly); extractAIC(ns); extractAIC(bs)
+```
+
+```{r}
+splines <- function(df) {
+  heat |> 
+  ggplot(aes(temp, cp)) +
+  geom_point() +
+  geom_smooth(
+    method = lm,
+    formula = y ~ ns(x, df)
+  ) +
+  labs(
+    title = glue::glue('Knots: {df}')
+  )
+}
+
+plots <- list()
+knots <- c(1, 4, 7)
+
+for (i in knots) {
+  print(plots[[i]] <- splines(df = i))
+}
 ```
