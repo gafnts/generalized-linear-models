@@ -484,3 +484,143 @@ for (i in knots) {
   print(plots[[i]] <- splines(df = i))
 }
 ```
+
+## Case study 1
+
+```{r}
+data(dental)
+dental <- dental |> as_tibble() |> clean_names()
+```
+
+```{r}
+model <- dental |> lm(dmft ~ sugar * indus, data = _)
+log_model <- dental |> lm(log(dmft) ~ sugar * indus, data = _)
+```
+
+```{r}
+diagnose <- 
+  function(data, model) {
+    indicators <- 
+      data |> 
+      mutate(
+        rstandard = rstandard(model),
+        fitted = fitted(model),
+        cooks = cooks.distance(model),
+        rowid_to_column(dental)
+      )
+    
+    p1 <- 
+      indicators |> 
+      ggplot(aes(fitted, rstandard)) +
+      geom_point() +
+      geom_smooth(
+        formula = 'y ~ x', 
+        method = 'loess'
+      ) +
+      labs(
+        x = 'Fitted values', 
+        y = 'Standardized residuals'
+      )
+    
+    p2 <- 
+      indicators |> 
+      ggplot(aes(sample = rstandard)) +
+      stat_qq() +
+      stat_qq_line() +
+      labs(
+        x = 'Theoretical quantiles',
+        y = 'Sample quantiles'
+      )
+    
+    p3 <- 
+      indicators |> 
+      ggplot(aes(rowid, cooks)) +
+      geom_col() +
+      labs(
+        x = 'Index',
+        y = 'Cook´s distance'
+      )
+    
+    (p1 + p2) / p3 +
+      plot_annotation(
+        title = 'Model diagnostics',
+        subtitle = glue::glue('Data: {
+                              str_to_title(deparse(substitute(data)))
+                              } | Model: {
+                              str_to_title(deparse(substitute(model)))
+                              }'),
+        theme = theme(
+          plot.title = element_text(
+            size = 16,
+            hjust = 0.5,
+            margin = margin(5, 0, 0, 0)
+          ),
+          plot.subtitle = element_text(
+            size = 10,
+            hjust = 0.5,
+            margin = margin(5, 0, 15, 0)
+          )
+        )
+      )
+  }
+```
+
+```{r}
+diagnose(dental, model)
+diagnose(dental, log_model)
+```
+
+```{r}
+im <- influence.measures(log_model)
+colSums(im$is.inf)
+```
+
+```{r}
+anova(log_model)
+summary(log_model)
+```
+
+The model can be written as:
+
+$$
+\begin{cases}
+y \sim N(\mu_i, s^2 = 0.298) \\
+\mu_i = 1.38711 - 0.00588x_1 - 1.29160x_2 + 0.02727x_1x_2
+\end{cases}
+$$
+
+The systematic component can be expanded as:
+
+$$
+E[log(y_i)] = \mu_i = 
+\begin{cases}
+1.38711 - 0.00588x_1 & \text{for industrialized countries} \\
+0.09551 + 0.02139x_1 & \text{for non-industrialized countries}
+\end{cases}
+$$
+
+```{r}
+c(
+  'AIC (model): ' = extractAIC(model)[2],
+  'AIC (log_model): ' = extractAIC(log_model)[2]
+)
+```
+
+```{r}
+dental |> 
+  mutate(
+    fit = fitted(model)
+  ) |> 
+  ggplot(aes(sugar, dmft, color = indus)) +
+  geom_point() +
+  geom_line(aes(y = fit, color = indus))
+
+dental |> 
+  mutate(
+    fit = fitted(log_model),
+    dmft = log(dmft)
+  ) |> 
+  ggplot(aes(sugar, dmft, color = indus)) +
+  geom_point() +
+  geom_line(aes(y = fit, color = indus))
+```
