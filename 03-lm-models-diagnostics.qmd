@@ -506,7 +506,7 @@ diagnose <-
         rstandard = rstandard(model),
         fitted = fitted(model),
         cooks = cooks.distance(model),
-        rowid_to_column(dental)
+        rowid_to_column(data)
       )
     
     p1 <- 
@@ -623,4 +623,80 @@ dental |>
   ggplot(aes(sugar, dmft, color = indus)) +
   geom_point() +
   geom_line(aes(y = fit, color = indus))
+```
+
+## Case study 2
+
+```{r}
+data(cheese)
+cheese <- cheese |> as_tibble() |> clean_names()
+```
+
+```{r}
+cheese |> 
+  mutate(log_h2s = log(h2s)) |> 
+  pivot_longer(!taste) |> 
+  ggplot(aes(value, taste, color = name)) +
+  geom_point() +
+  facet_wrap(~name, scales = 'free_x') +
+  theme(legend.position = 'none') +
+  labs(y = 'Teste score', x = 'Values')
+```
+
+#### Interactions
+
+```{r}
+full_model <- cheese |> lm(taste ~ acetic * log(h2s) * lactic, data = _)
+
+summary(full_model)
+drop1(full_model, test = 'F')
+```
+
+```{r}
+no_inter_model <- update(full_model, . ~ (acetic + log(h2s) : + lactic)^2)
+
+summary(no_inter_model)
+drop1(no_inter_model, test = 'F')
+```
+
+```{r}
+no_main_model <- cheese |> lm(taste ~ log(h2s) + lactic + acetic, data = _)
+
+summary(no_main_model)
+drop1(no_main_model, test = 'F')
+```
+
+```{r}
+final_model <- cheese |> lm(taste ~ log(h2s) + lactic, data = _)
+
+summary(final_model)
+```
+
+```{r}
+cheese |> 
+  mutate(log_h2s = log(h2s)) |> 
+  corrr::correlate()
+```
+
+```{r}
+diagnose(cheese, final_model)
+```
+
+```{r}
+cheese |> 
+  mutate(
+    resid = rstandard(model),
+    log_h2s = log(h2s)
+  ) |> 
+  select(acetic, lactic, log_h2s, resid) |> 
+  pivot_longer(!resid) |> 
+  ggplot(aes(value, resid, color = name)) +
+  geom_point() +
+  geom_smooth(method = 'loess', formula = 'y ~ x', se = FALSE) +
+  facet_wrap(~ name, scales = 'free_x') +
+  theme(legend.position = 'none')
+```
+
+```{r}
+im <- influence.measures(final_model); colSums(im$is.inf)
 ```
