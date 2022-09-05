@@ -1,0 +1,5 @@
+# Beyond linear regression: The method of maximum likelihood
+
+```{r}
+pacman::p_load(tidyverse)
+```
