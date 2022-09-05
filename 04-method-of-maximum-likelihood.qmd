@@ -1,5 +1,40 @@
 # Beyond linear regression: The method of maximum likelihood
 
 ```{r}
-pacman::p_load(tidyverse)
+pacman::p_load(tidyverse, GLMsData, janitor, patchwork)
+```
+
+## The idea of likelihood estimation
+
+```{r}
+data('quilpie')
+quilpie <- quilpie |> as_tibble() |> clean_names() |> glimpse()
+```
+
+$$
+P(y|\mu) = \mu^y (1-\mu)^{1-y},\\
+\text{for } y=0 \text{ or } 1
+$$
+
+```{r}
+mu <- seq(0, 1, 0.01492537)
+ll <- rep(0, length(mu))
+
+for (i in length(mu)) {
+ ll[i] <- sum(
+   dbinom(quilpie$y, size = 1, prob = mu[i], log = TRUE)
+ ) 
+}
+
+likelihood <- 
+  tibble(
+    mu = mu,
+    likelihood = ll
+)
+```
+
+```{r}
+likelihood |> 
+  ggplot(aes(mu, likelihood)) +
+  geom_point()
 ```
