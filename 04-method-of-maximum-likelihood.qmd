@@ -38,3 +38,62 @@ likelihood |>
   ggplot(aes(mu, likelihood)) +
   geom_point()
 ```
+
+## Maximum likelihood for estimating one parameter
+
+```{r}
+# Maximum likelihood estimator
+muhat <- mean(quilpie$y)
+
+# Fisher's information
+n <- length(quilpie$y)
+info <- n / (muhat * (1 - muhat))
+
+# Standard error of MLE
+std <- 1 / sqrt(info)
+  
+c(
+  'Mu:' = muhat,
+  'Fisher information:' = info,
+  'Standard error:' = std
+)
+```
+
+## Maximum likelihood for more than one parameter
+
+```{r}
+quilpie <- 
+  quilpie |> 
+  mutate(
+    y = factor(y, labels = c('No', 'Yes'))
+  )
+```
+
+```{r}
+p1 <- 
+  quilpie |> 
+  ggplot(aes(soi,y)) +
+  geom_boxplot() +
+  labs(x = '', y = '')
+
+p2 <- 
+  quilpie |> 
+  ggplot(aes(soi, y)) +
+  geom_jitter(height = 0.2) +
+  labs(x = '', y = '')
+
+p3 <- 
+  quilpie |> 
+  ggplot(aes(soi, fill = y)) +
+  geom_density(position = position_fill(), size = 0) +
+  scale_fill_brewer(palette = "Set2") +
+  scale_x_continuous(expand = expansion(0)) +
+  scale_y_continuous(expand = expansion(0)) +
+  labs(y = '') +
+  theme(
+    legend.position = 'bottom',
+    legend.title = element_blank()
+  )
+
+(p1 + p2) / p3
+```
