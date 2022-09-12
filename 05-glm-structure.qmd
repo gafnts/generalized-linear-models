@@ -3,3 +3,67 @@
 ```{r}
 pacman::p_load(tidyverse, GLMsData, janitor, patchwork)
 ```
+
+## The random component: Exponential dispersion models
+
+### The variance function
+
+$$
+var[y] = \phi V(\mu)
+$$
+
+```{r}
+data('nminer')
+nminer <- nminer |> as_tibble() |> clean_names()
+```
+
+```{r}
+breaks <- c(-Inf, 4, 11, 15, 19, Inf) + .5
+
+nminer <- 
+  nminer |> 
+  mutate(
+    eucs_cut = cut(eucs, breaks = breaks)
+  )
+
+groups <- 
+  nminer |> 
+  group_by(eucs_cut) |> 
+  summarise(
+    size = n(),
+    mean = mean(minerab),
+    variance = var(minerab)
+  ) |> 
+  print()
+```
+
+```{r}
+p1 <- 
+  nminer |> 
+  ggplot(aes(eucs, minerab)) +
+  geom_jitter() +
+  geom_vline(
+    xintercept = breaks,
+    linetype = 'dashed',
+    color = 'gray80'
+  )
+
+p2 <- 
+  groups |> 
+  ggplot(aes(log(mean), log(variance))) +
+  geom_point()
+
+p1 + p2
+```
+
+$$
+log(\text{group variance}) = \alpha + \beta log(\text{group mean})
+$$
+
+$$
+\text{(group variance)} \propto \text{(group mean)}
+$$
+
+```{r}
+groups |> lm(log(variance) ~ log(mean), data = _) |> summary()
+```
