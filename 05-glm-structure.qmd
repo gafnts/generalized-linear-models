@@ -1,0 +1,5 @@
+# Generalized linear models: Structure
+
+```{r}
+pacman::p_load(tidyverse, GLMsData, janitor, patchwork)
+```
